@@ -19,7 +19,7 @@ After some good amount of time trying to understand this performance difference,
 
 In both Lucene and Tantivy, disjunctive queries evaluate by loading windows of matches into a bit set, and then iterating set bit from this bit set into the collector. In the case when the collector is only interested in the number of matches of the query, Tantivy has an optimization that skips iterating this bit set, and instead just counts the number of set bit using `popcnt` instructions.
 
-When a similar [change](https://github.com/apache/lucene/pull/12415) was merged to Lucene, it improved the performance of the `CountOrHighHigh` task - which counts the number of matches of a disjunctive query on two high-frequency terms - by 60% (annotation [FN](https://benchmarks.  mikemccandless.com/CountOrHighHigh.html)). 
+When a similar [change](https://github.com/apache/lucene/pull/12415) was merged to Lucene, it improved the performance of the `CountOrHighHigh` task - which counts the number of matches of a disjunctive query on two high-frequency terms - by 60% (annotation [FN](https://benchmarks.mikemccandless.com/CountOrHighHigh.html)). 
 
 ### Better auto-vectorization
 
@@ -87,7 +87,7 @@ class BufferedDocIdSetIterator extends DocIdSetIterator {
 
   void refill() { /* TODO */ }
 
-  void loadIntoBitSet(BitSet bitSet, int offset) {
+  void intoBitSet(BitSet bitSet, int offset) {
     while (buffer[buffer.length - 1] - offset < bitSet.length()) {
       // In the below loop, BitSet#set gets inlined and the various arithmetic operations auto-vectorize.
       for (int j = i; j < buffer.length; ++j) {
@@ -116,7 +116,7 @@ class BitSet {
 }
 
 void loadIteratorIntoBitSet(DocIdSetIterator iterator, BitSet bitSet, int offset) {
-  iterator.loadIntoBitSet(bitSet, offset);
+  iterator.intoBitSet(bitSet, offset);
 }
 ```
 
@@ -124,7 +124,7 @@ This [refactoring](https://github.com/apache/lucene/pull/14069) yielded a 35% sp
 
 ### Simpler skip data
 
-Lucene had been [discussing inlining skip data in postings lists for a long time](https://github.com/apache/lucene/issues/4036), which had been identified as a way to improve performance as well as the memory/disk access pattern. The fact that Tantivy performed so well with a single level of skip data encouraged us to also explore using only a couple of levels, vs. the 10 levels that Lucene was previously maintaining. After some benchmarks, we landed on 2 levels of skip data, recorded every block (128 docs) and 32 blocks (4,096 docs).
+Lucene had been [discussing inlining skip data in postings lists for a long time](https://github.com/apache/lucene/issues/4036), which had been identified as a way to improve performance as well as the memory/disk access pattern. The fact that Tantivy performed so well with a single level of skip data encouraged us to also explore using only a couple of levels, vs. the 10 levels(!) that Lucene was previously maintaining. After some benchmarks, we landed on 2 levels of skip data, recorded every block (128 docs) and 32 blocks (4,096 docs).
 
 This [change](https://github.com/apache/lucene/pull/13585) yielded a 33% speedup on Lucene's `CountAndHighMed` task (annotation [GS](https://benchmarks.mikemccandless.com/CountAndHighMed.html)), which counts the number of matches of a conjunctive query over a high-frequency term and a medium-frequency term. It turns out that the speedup was more due to skipping now being significantly simpler than to skip data being inlined in postings. Simpler code often performs faster.
 
@@ -146,4 +146,4 @@ This is especially noticeable on phrase queries. While Lucene evaluates phrase q
 
 When working on performance, it's often hard to know whether you have room for improvement and how much. Tantivy has been very helpful from this perspective by giving targets to Lucene that should be achievable given how much Lucene and Tantivy share architecture-wise.
 
-While recent versions of Lucene (10.2 at the time of writing this post) have recovered a good share of the performance difference on many queries and collection types, it is still noticeably slower on some of them, notably phrase queries and exhaustive evaluation with scores (`TOP_100_COUNT`). There is a lot of work left to do, and hopefully we can have even more queries and collection types when Lucene is on par or faster in the future.
+While recent versions of Lucene (10.2 at the time of writing this post) have recovered a good share of the performance difference on many queries and collection types, it is still noticeably slower on some of them, notably phrase queries and exhaustive evaluation with scores (`TOP_100_COUNT`). There is a lot of work left to do, and hopefully we can have even more queries and collection types where Lucene is on par or faster in the future.
