@@ -4,7 +4,7 @@ title:  "An analysis of Search Benchmark, the Game"
 date:   2025-05-12
 ---
 
-"Search Benchmark, the Game" is maintained at https://github.com/quickwit-oss/search-benchmark-game by the Tantivy folks and published at https://tantivy-search.github.io/bench/. I don't know the full history behind this benchmark, GitHub says that this repository was started by Jason Wolfe in 2018 as a comparison between Lucene and (early versions of!) Tantivy before getting forked and more actively maintained as of 2023.
+"Search Benchmark, the Game" is maintained at [https://github.com/quickwit-oss/search-benchmark-game](https://github.com/quickwit-oss/search-benchmark-game) by the Tantivy folks and published at [https://tantivy-search.github.io/bench/](https://tantivy-search.github.io/bench/). I don't know the full history behind this benchmark, GitHub says that this repository was started by Jason Wolfe in 2018 as a comparison between Lucene and (early versions of!) Tantivy before getting forked and more actively maintained as of 2023.
 
 It's a simple benchmark. It runs queries from the [AOL query dataset](https://en.wikipedia.org/wiki/AOL_search_data_leak) against an export of English Wikipedia. Additional queries have been added over time that have interesting performance characteristics, queries that only contain stop words for instance. Adding an engine is simple too, you just need to create an executable that creates an index from content provided on the standard input, and another executable that takes a command and a query on the standard input, and runs it against this previously generated index. The following engines are checked in at the moment:
  - [Apache Lucene](https://lucene.apache.org/), a popular search library in Java,
@@ -32,6 +32,10 @@ Benchmarks naturally have biases, as a function of what they run and what metric
  - The `COUNT` collection type is not that useful in practice. I imagine that it was initially introduced as a way to benchmark exhaustive query evaluation when scores are disabled, something that happens in the real world when computing facets for a query, e.g. counts per category on an e-commerce catalog. But some engines now have `COUNT`-specific optimizations that would not apply to more general faceting.
 
 ## Interesting queries and optimizations
+
+### WAND and MAXSCORE
+
+To have a chance of performing well with the `TOP_*` collection types, engines have no choice but to support dynamic pruning and skip evaluating documents whose score would have no chance of making it to the final top hits. Tantivy and PISA implement block-max WAND while Lucene implements block-max MAXSCORE, two state-of-the-art for dynamic pruning.
 
 ### Term query on a stop word (`the`) and `TOP_*` collection types
 
@@ -91,4 +95,6 @@ One thing that is fascinating to me is how this sort of optimization is only com
 
 ## Closing thoughts
 
-This benchmark does a good job at highlighting how some design choices affect query evaluation efficiency. It's been interesting to see where PISA or Tantivy performed better than Lucene, and find what could be learned from them. Two engines I wish were added are PostgreSQL's full-text search capabilities and Vespa, as I'm sure that there are things to learn from those as well. It's likely a bit sensitive, as nobody likes looking bad in a benchmark, so incentives are low for the folks who know these engines best and would be in the best position to integrate them into the benchmark, unless they have some intuition that they would look good.
+This benchmark does a good job at highlighting how some design choices affect query evaluation efficiency. It's been interesting to see where PISA or Tantivy performed better than Lucene, and find what could be learned from them. Two engines I wish were added are PostgreSQL's full-text search capabilities and Vespa, as I'm sure that there are things to learn from those as well.
+
+It would also be interesting to extend this benchmark to see how performance evolves when there are deletions in the index, or when queries are filtered. Two cases that are very frequent in the real world, but don't receive as much attention from Information Retrieval researchers.
