@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Analysis of the Vespa vs. Elasticsearch benchmark"
+title:  "A look at the Vespa vs. Elasticsearch benchmark"
 date:   2025-06-17
 ---
 
@@ -10,7 +10,7 @@ I was attending Berlin Buzzwords this week and someone asked me about the [Elast
 
 I haven't run the benchmarks myself to reproduce its results, but the data looks plausible to me so I'm assuming that it has been run in good faith. Also I don't know much about Vespa so I'm very happy to be corrected if I'm making wrong assumptions about it. Even though the benchmark targets Elasticsearch rather than Lucene, most of the comparison relates to decisions that have been made at the Lucene level, which is why you'll see more mentions of Lucene than Elasticsearch, the comparison would likely be similar with any Lucene-based search engine. 
 
-I'll naturally be spending more times on some questionable aspects of this benchmark, but in general it looks like great care has been taken about making it an apples-to-apples comparison. Thanks to the Vespa team for that, most benchmarks don't have this level of care.
+I'll naturally be spending more time on some questionable aspects of this benchmark, but in general it looks like great care has been taken about making it an apples-to-apples comparison. Thanks to the Vespa team for that, most benchmarks don't have this level of care.
 
 Finally, after so many years working on Lucene and Elasticsearch, I likely have biases!
 
@@ -38,10 +38,10 @@ I am curious how Vespa manages to be ~2x faster (both latency-wise and throughpu
 
 ## Conclusion
 
-Elasticsearch and Lucene are fast-moving targets these days. It will be interesting to see what numbers now look like after [improvements to pre-filtering] (https://www.elastic.co/search-labs/blog/filtered-hnsw-knn-search), [faster vector merging](https://www.elastic.co/search-labs/blog/hnsw-graphs-speed-up-merging) , or optimizations to `DisjunctionMaxQuery` (the query that takes the max similarity across several fields, see annotation [HP](https://benchmarks.mikemccandless.com/DismaxOrHighHigh.html)).
+Elasticsearch and Lucene are fast-moving targets these days. It will be interesting to see what numbers now look like after [improvements to pre-filtering](https://www.elastic.co/search-labs/blog/filtered-hnsw-knn-search), [faster vector merging](https://www.elastic.co/search-labs/blog/hnsw-graphs-speed-up-merging) , or optimizations to `DisjunctionMaxQuery` (the query that takes the max similarity across several fields, see annotation [HP](https://benchmarks.mikemccandless.com/DismaxOrHighHigh.html)).
 
 Hopefully the benchmark can also be improved a bit to run more robust queries, e.g. BM25F and RRF instead of max-similarity and a linear combination of vector and lexical scores.
 
-Yet Lucene and Elasticsearch still have things to learn from this benchmark. The most important one is probably that we should better benchmark the "searching while indexing"  case. There are likely some relatively low hanging fruits there, such as enabling [merge-on-refresh](https://blog.mikemccandless.com/2021/03/open-source-collaboration-or-how-we.html) in Elasticsearch or [bypassing HNSW graph building for tiny segments](https://github.com/apache/lucene/issues/13447) in Lucene.
+Yet Lucene and Elasticsearch still have things to learn from this benchmark. The most important one is probably that we should better benchmark the "searching while indexing" case. There are likely some relatively low hanging fruits there, such as enabling [merge-on-refresh](https://blog.mikemccandless.com/2021/03/open-source-collaboration-or-how-we.html) in Elasticsearch or [bypassing HNSW graph building for tiny segments](https://github.com/apache/lucene/issues/13447) in Lucene.
 
 In general, I expect Vespa to keep an advantage for update and realtime search scenarios in this benchmark, though it will be good for Lucene/Elasticsearch to see how much of the gap can be closed. Even though Vespa gets better results, I still feel good about Lucene, which gets other benefits not highlighted in this benchmark: thanks to immutable segments, you can easily scale out the search load of an index by replicating segment files to N search nodes. This is a very powerful feature that more and more Lucene-based search engines are trying to fully take advantage of: amazon.com, Yelp nrtSearch, Elasticsearch Serverless, OpenSearch, ... Then the Vespa vs. Elasticsearch trade-off boils down to how much value you can get from Lucene's efficient scalability through segment replication vs. Vespa's realtime update and search support.
