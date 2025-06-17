@@ -34,7 +34,7 @@ I also like that the benchmark searches across multiple fields, another dead ang
 
 Finally, the benchmark says it didn't use RRF because this feature was still marked as experimental in the Elasticsearch docs, I hope that the next run of the benchmark will use RRF, which should again be a more robust way of combining lexical and semantic hits. I would also expect performance to improve for Elasticsearch this way, as the way that the vector query is put as a SHOULD clause of the `bool` query likely disables dynamic pruning in practice (an issue that the [linear retriever](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/retrievers#linear-retriever) doesn't have).
 
-I am curious how Vespa manages to be ~2x faster (both latency-wise and throughput-wise) than Elasticsearch in the single-client force-merged unfiltered semantic-search case. In practice, both should be using a single HNSW graph with similar construction parameters, so I was expecting closer performance numbers. Maybe Lucene has some missing optimizations there?
+I am curious how Vespa manages to be ~2x faster (both latency-wise and throughput-wise) than Elasticsearch in the single-client force-merged unfiltered semantic-search case. In practice, both should be using a single HNSW graph with similar construction parameters, so I was expecting closer performance numbers. Does Lucene have some missing optimizations there?
 
 ## Conclusion
 
