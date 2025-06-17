@@ -4,7 +4,7 @@ title:  "A look at the Vespa vs. Elasticsearch benchmark"
 date:   2025-06-17
 ---
 
-I was attending Berlin Buzzwords this week and someone asked me about the [Elasticsearch vs. Vespa comparison](https://blog.vespa.ai/elasticsearch-vs-vespa-performance-comparison/) produced by the Vespa people, so I thought I'd publish my thoughts.
+I was attending [Berlin Buzzwords](https://2025.berlinbuzzwords.de/) today and someone asked me about the [Elasticsearch vs. Vespa comparison](https://blog.vespa.ai/elasticsearch-vs-vespa-performance-comparison/) produced by the Vespa people, so I thought I'd publish my thoughts.
 
 ## Disclaimers
 
