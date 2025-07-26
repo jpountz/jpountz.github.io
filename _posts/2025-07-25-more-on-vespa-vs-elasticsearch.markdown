@@ -10,19 +10,21 @@ Like Lucene/Elasticsearch, Vespa is a large codebase that takes time to get fami
 
 ## Vespa
 
-Like Lucene, Vespa builds on HNSW and segmented inverted indexes, evaluates queries in a document-at-a-time fashion, dynamically prunes low-scoring hits to speed up the evaluation of top-k queries, etc. All queries must be able to produce doc-ID-ordered iterators of matches, including boolean queries, so you can flexibly compose queries however you want. Disjunctive queries combine iterators using a heap, conjunctive queries advance iterators in a leap-frog fashion. This makes Lucene and Vespa similar in many regards.
+Like Lucene, Vespa builds on HNSW and inverted indexes, evaluates queries in a document-at-a-time fashion, dynamically prunes low-scoring hits to speed up the evaluation of top-k queries, etc. All queries must be able to produce doc-ID-ordered iterators of matches, including boolean queries, so you can flexibly compose queries however you want. Disjunctive queries combine iterators using a heap, conjunctive queries advance iterators in a leap-frog fashion. This makes Lucene and Vespa similar in many regards.
 
-Vespa's code is pretty clean and well organized into reusable abstractions. For instance, it has an internal implementation of a mutable yet slow-ish inverted index, another one of a fast yet immutable segmented inverted index, which are then combined to get the best of both worlds (fast and mutable), similarly to how LSM trees buffer data in memory and later flush it to disk.
+Vespa's code is pretty clean and well organized into reusable abstractions. For instance, it has an internal implementation of a mutable yet slow-ish inverted index, another one of a fast yet immutable inverted index, which are then combined to get the best of both worlds (fast and mutable), similarly to how LSM trees buffer data in memory and later flush it to disk.
 
-Obviously, the way how Vespa prioritizes realtime-ness when Lucene prioritizes incremental replication of indexes is a first big difference. But there are more differences (and similarities) that are worth looking into.
+Obviously, the way how Vespa prioritizes realtime-ness when Lucene prioritizes immutability is a first big difference. But there are more differences (and similarities) that are worth looking into.
 
 ### Slow query handling
 
 Textbook information retrieval works great for full-text search but tends to fall short in the real world when needing to work with more complex queries, such as queries on unindexed fields. Computing the next matching document on such queries may require doing a linear scan. Lucene and Vespa have different solutions to this problem that are based on similar ideas.
 
-Lucene allows queries to be decomposed into a fast approximation and a slower per-document check called `TwoPhaseIterator`. For instance, in the case of a phrase query, the approximation would match documents that contain all phrase terms, and the per-document check would read positions to check if these terms can be found at consecutive positions. This helps conjunctive queries first find agreement between all approximations before running the more expensive per-document checks. For instance, a phrase query on "Lucene in action" filtered by the "Books" category would only evaluate positions of the "Lucene in action" phrase query on documents that not only contain all 3 terms ("Lucene", "in" and "action") in the searched field, but also "Books" in the category field.
+Lucene allows queries to be decomposed into a fast approximation and a slower per-document check called `TwoPhaseIterator`. For instance, in the case of a phrase query, the approximation would match documents that contain all phrase terms, and the per-document check would read positions to check if these terms can be found at consecutive positions. This helps conjunctive queries first find agreement between all approximations before running the more expensive per-document checks. For instance, a phrase query on "Lucene in action" filtered on the "Books" category would only evaluate positions of the "Lucene in action" phrase query on documents that not only contain all 3 terms ("Lucene", "in" and "action") in the searched field, but also "Books" in the category field.
 
-Vespa takes a different approach and allows search iterators to be not "strict", which effectively allows iterators to not advance to the next match if the target document doesn't match. Said otherwise, doing `iterator.seek(target)` (`iterator.advance(target)` in Lucene) would set the current doc ID to `target` if it matches, and may otherwise not advance the iterator if `target` doesn't match. Many queries can produce either strict or unstrict iterators, and the decision is made based on how selective required clauses are. This is similar to how Lucene passes a `leadCost` information at `Scorer` creation time to allow queries to optimize the iterators that they produce, which is [how `IndexOrDocValuesQuery` works](https://www.elastic.co/blog/better-query-planning-for-range-queries-in-elasticsearch).
+Vespa takes a different approach and allows search iterators to be not "strict", which effectively allows iterators to not advance to the next match if the target document doesn't match. Said otherwise, doing `iterator.seek(target)` (`iterator.advance(target)` in Lucene) would set the current doc ID to `target` if it matches, and may otherwise not advance the iterator if `target` doesn't match (while a strict iterator must advance to the next matching doc after target in this case). Many queries can produce either strict or unstrict iterators, and the decision is made based on how selective required clauses are. This is similar to how Lucene passes a `leadCost` information at `Scorer` creation time to allow queries to optimize the iterators that they produce, which is [how `IndexOrDocValuesQuery` works](https://www.elastic.co/blog/better-query-planning-for-range-queries-in-elasticsearch).
+
+I like the Lucene approach a bit better conceptually, but it has the downside of requiring up to two virtual calls per iterator per doc ID (one on the approximation, one for the per-document check) while the Vespa approach requires a single virtual call per iterator per doc ID.
 
 ### Dynamic pruning
 
@@ -41,38 +43,42 @@ Second, both Lucene and Vespa integrate their WAND implementation with their sup
 
 Finally, both Lucene and Vespa use fixed-point numbers to track score upper bounds, to be able to add and subtract aggregates of score upper bounds without accumulating accuracy losses due to floating-point arithmetic.
 
-My main surprise there was to not see block-max indexes in Vespa. They allow WAND to works with local upper bounds of the score instead of global upper bounds of the score, something that has proved to help query evaluation significantly on several serious benchmarks. Block-max indexes also help perform some skipping with single term queries, which is not anecdotal as queries on a common word are otherwise worst-case scenarios from the perspective of retrieval efficiency.
+My main surprise there was to not see block-max indexes in Vespa. They allow WAND to works with local upper bounds of the score instead of global upper bounds of the score, something that has proved to help query evaluation significantly on several serious benchmarks. Block-max indexes also help skip with single term queries, which is not anecdotal as queries on a common word are otherwise worst-case scenarios from the perspective of retrieval efficiency.
+
+On paper, support for block-max indexes should give Lucene a significant advantage over Vespa for lexical search.
 
 ### Postings lists
 
-Lucene splits postings lists into blocks of 128 doc IDs. Full blocks are encoded with FOR-delta or as a bit set, whichever takes the least space. Tail blocks (less than 128 docs) are encoded using group-varint. Vespa encodes postings lists as delta vInts. Both interleave term frequencies and postings into the same file.
+Lucene splits postings lists into blocks of 128 doc IDs. Full blocks are encoded with FOR-delta or as a bit set, whichever takes the least space. Tail blocks (less than 128 docs) are encoded using delta-coding combined with group-varint. Vespa encodes postings lists as delta varints. Both interleave term frequencies and postings into the same file.
 
 Lucene stores field lengths in a separate file, while Vespa denormalizes field lengths into the inverted index, interleaved with postings and frequencies. This likely gives Vespa better memory locality in exchange for higher storage requirements, since field lengths need to be duplicated for every term of the same field and document. It would be interesting to evaluate how doing the same in Lucene would affect retrieval efficiency.
 
 Lucene has 2 levels of skip lists, every 128 and 4,096 postings. Vespa has 4 levels of skip lists, every 16, 128, 1,024 and 8,192 postings.
 
+Both PFOR and group-varint should be significantly cheaper to decode than vanilla varints, so again on paper Lucene should perform better on queries that consume many doc IDs of postings lists. For queries that check a small fraction of postings lists, Vespa's granular skip lists (first level every 16 docs) may help work around the slow decoding?
+
 ### Vector search & filtering
 
 Both Lucene and Vespa use HNSW, support pre-filtering, and implement [ACORN-1](https://www.elastic.co/search-labs/blog/filtered-hnsw-knn-search) to speed up pre-filtering.
 
-In Vespa, various thresholds can be configured to tell Vespa how to apply the filter based on how selective it is. It supports the following options:
+In Vespa, various thresholds can be configured to tell Vespa how to apply the filter based on how selective it is. It supports the following approaches:
   - exact search on matches of the filter (for very selective filters),
   - filter-first HNSW search (for rather selective filters),
   - normal HNSW search (for filters that match many docs),
   - as a post-filter (for filters that match most documents) by scaling the number of candidates to retrieve by the inverse of the selectivity of the filter.
 
-In contrast, Lucene doesn't rely on thresholds. It starts performing an HNSW search. At every step of the HNSW search, it decides whether to explore the extended neighborhood (ACORN-1) depending on how much of the immediate neighborhood got filtered out.  If at some point, the number of vector comparisons exceeds the number of matches of the filter, then it falls back to an exact search on the matches of the filter.
+In contrast, Lucene doesn't rely on thresholds. It starts performing an HNSW search. For every candidate, it decides whether to explore the extended neighborhood (ACORN-1) depending on how much of the immediate neighborhood matches the filter.  If at some point, the number of vector comparisons exceeds the number of matches of the filter, then it falls back to an exact search on the matches of the filter.
 
-The Lucene approach likely better copes with worst-case scenarios, when the filter matches many docs, yet the graph needs to be deeply explored to find enough nearest neighbors that match the filter - something that cannot be captured by thresholds. However, it may need to run up to 2x more comparisons than necessary, and I wouldn't be surprised if simple heuristics like Vespa's worked well on average in practice.
+While the Vespa approach certainly works well in practice, I like how the Lucene approach adapts its behavior to the data more dynamically. That said, Lucene should get better at detecting when a HNSW search would very likely require more vector comparisons than an exact search, so that it could go directly with the exact search instead of doing a partial HNSW search first and throw away its results.
 
 ## Takeaways
 
 I could tell that Vespa makes significant efforts in combining retrieval with filtering, both for lexical search and vector search. Like Lucene. This is interesting because this topic is surprisingly not covered much in the literature. What is even more interesting is how Lucene and Vespa independently converged to similar solutions to the problem of combining dynamic pruning and filtering, without any coordination as far as I can tell.
 
-I had never considered denormalizing length normalization factors into postings lists. I am now curious to evaluate how it affects performance, it should be rather easy to hack in Lucene to get an idea.
+I had never considered denormalizing length normalization factors into postings lists. I am now curious to evaluate how it affects retrieval efficiency, it should be rather easy to hack in Lucene to get an idea.
 
-On the other hand, I was expecting postings to be encoded in a more modern way (such as PFOR-delta or partitioned Elias-Fano) and support for block-max indexes. Both these changes resulted in significant improvements when they got released in Lucene. I am curious if there is anything that would prevent these improvements, or if the Vespa team simply never got to them.
+On the other hand, I was expecting postings to be encoded in a more modern way (such as PFOR-delta or partitioned Elias-Fano) and support for block-max indexes. Both these changes resulted in significant improvements when they got released in Lucene. I am curious if there is anything that prevents these improvements, or if the Vespa team simply hasn't got to them yet.
 
-Another thing I could not find in Vespa is support for index sorting, which I consider one of the most powerful (and under-used) tools of the Lucene toolbox.
+Another thing I could not find in Vespa is support for index sorting, which I consider one of the most powerful (and under-used) tool of the Lucene toolbox.
 
-I found the different approaches to pre-filtering interesting. In general, I don't like thresholds and prefer more dynamic approaches like Lucene's. That said, Lucene is likely a bit too defensive and could identify cheap heuristics when an exact search would perform faster with extremely high likelihood without running a HNSW search first.
+It would be interesting to get Vespa included in https://tantivy-search.github.io/bench/ at some point, to better quantify how these differences in design/implementation translate in terms of performance.
