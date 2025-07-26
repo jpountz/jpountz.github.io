@@ -6,7 +6,7 @@ date:   2025-07-25
 
 In a previous [post](/2025/06/17/analysis-of-Elasticsearch-vs-Vespa.html), I took a look at the Vespa vs. Elasticsearch benchmark that the Vespa people run. The results made me want to dig a little deeper to see how Vespa and Lucene/Elasticsearch differ implemetation-wise. I took advantage of Vespa being open-source under the Apache License 2.0 to take a look at the [source code](https://github.com/vespa-engine/vespa). I found some similarities and differences that I expected, but also some that I did not expect!
 
-Like Lucene/Elasticsearch, Vespa is a large codebase that takes time to get familiar with, so there are chances that I misundertood some things about Vespa. Feel free to let me know if you spot any mistake.
+Like Lucene/Elasticsearch, Vespa is a large codebase that takes time to get familiar with, so there are chances that I misundertood some things about Vespa. Feel free to let me know if you spot any mistake. Also remember I likely have a bias towards Lucene/Elasticsearch.
 
 ## Vespa
 
@@ -73,7 +73,7 @@ While the Vespa approach certainly works well in practice, I like how the Lucene
 
 ## Takeaways
 
-I could tell that Vespa makes significant efforts in combining retrieval with filtering, both for lexical search and vector search. Like Lucene. This is interesting because this topic is surprisingly not covered much in the literature. What is even more interesting is how Lucene and Vespa independently converged to similar solutions to the problem of combining dynamic pruning and filtering, without any coordination as far as I can tell.
+I could tell that Vespa makes significant efforts to combine retrieval with filtering efficiently, both for lexical search and vector search. Like Lucene. This is interesting because this topic is surprisingly not covered much in the literature. What is even more interesting is how Lucene and Vespa independently converged to similar solutions to the problem of combining dynamic pruning and filtering, without any coordination as far as I can tell.
 
 I had never considered denormalizing length normalization factors into postings lists. I am now curious to evaluate how it affects retrieval efficiency, it should be rather easy to hack in Lucene to get an idea.
 
@@ -81,4 +81,4 @@ On the other hand, I was expecting postings to be encoded in a more modern way (
 
 Another thing I could not find in Vespa is support for index sorting, which I consider one of the most powerful (and under-used) tool of the Lucene toolbox.
 
-It would be interesting to get Vespa included in https://tantivy-search.github.io/bench/ at some point, to better quantify how these differences in design/implementation translate in terms of performance.
+It would be interesting to get Vespa included in [Search Benchmark, The Game](https://tantivy-search.github.io/bench/) at some point, to better quantify how these differences in design/implementation of lexical search translate in terms of performance.
