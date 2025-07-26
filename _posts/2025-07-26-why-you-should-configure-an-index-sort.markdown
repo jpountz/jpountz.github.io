@@ -4,7 +4,7 @@ title:  "Why you should configure an index sort on your Lucene indexes"
 date:   2025-07-26
 ---
 
-Some time ago, I [wrote](https://x.com/jpountz/status/1907454969877291035) that "if you do not configure an index sort on your #Lucene indexes, you are missing search-time efficiency benefits that are almost certainly worth the (low) index-time overhead".
+Some time ago, I [wrote](https://x.com/jpountz/status/1907454969877291035) that "if you do not configure an index sort on your Lucene indexes, you are missing search-time efficiency benefits that are almost certainly worth the (low) index-time overhead".
 
 For clarity, index sorting refers to the ability of configuring the way data is ordered on disk within segments.
 
@@ -12,7 +12,7 @@ One application of index sorting is early termination. For instance, it would ma
 
 How can you do this? Most datasets have natural dimensions that usually make good candidates for the index sort. If you have several of them, try to order them hierarchically (e.g. `country` before `city`), by importance (how likely they are used for filtering and faceting) and decending cardinality. For instance,
  - An e-commerce catalog could be sorted by `category`, then `brand` (within products of the same category).
- - A web index could be sorted by reverse domain name (e.g. `ìo.github.jpountz` for this blog) then URL path.
+ - A web index could be sorted by reverse domain name (e.g. `io.github.jpountz` for this blog) then URL path.
  - An logging dataset could be sorted by container ID, then file path, then descending timestamp.
  - A catalog of cars for sale could be sorted by  `type` (station wagon, SUV, ...), then `brand`, then `model`, then `fuel_type`, then `registration_year`, then `mileage` (just for the sake of giving an example with a longer sort).
 
@@ -20,7 +20,7 @@ If you are familiar with analytical databases/workloads, this likely sounds fami
 
 Why does it help? There are several reasons, I'll give a few ones. First, if similar documents are clustered in the doc ID space then postings lists will also have clusters of doc IDs that are close to one another, with large gaps between these clusters. These gaps are important, because processing conjunctive queries in search engines boils down to advancing iterators in a leap-frog fashion. And if one iterator has a large gap between consecutive doc IDs, then the conjunctive query will naturally skip evaluating other clauses over this large gap. It's much better to have few very large gaps than many small gaps efficiency-wise.
 
-Disjunctive queries also benefit from clustered postings lists. Disjunctive queries typically merge multiple iterators in a streaming fashion by using a heap. If postings lists are clustered, then the next minimum doc ID after the current one is more likely to belong to the iterator at the top of the heap than to another iterator. This results in less heap reordering overall. 
+Disjunctive queries also benefit from clustered postings lists. Disjunctive queries typically merge multiple iterators in a streaming fashion by using a heap. If doc IDs are clustered in postings lists, then the next minimum doc ID after the current one is more likely to belong to the iterator at the top of the heap than to another iterator. This results in less heap reordering overall. 
 
 Another reason is that clustered postings lists compress better. Better decompression speed. Lower space requirements as well. And these lower space requirements also help better take advantage of the memory bandwidth.
 
