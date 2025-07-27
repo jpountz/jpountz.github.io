@@ -63,7 +63,7 @@ Both Lucene and Vespa use HNSW, support pre-filtering, and implement [ACORN-1](h
 
 In Vespa, various thresholds can be configured to tell Vespa how to apply the filter based on how selective it is. It supports the following approaches:
   - exact search on matches of the filter (for very selective filters),
-  - filter-first HNSW search (for rather selective filters),
+  - filter-first HNSW search (ACORN-1, for rather selective filters),
   - normal HNSW search (for filters that match many docs),
   - as a post-filter (for filters that match most documents) by scaling the number of candidates to retrieve by the inverse of the selectivity of the filter.
 
