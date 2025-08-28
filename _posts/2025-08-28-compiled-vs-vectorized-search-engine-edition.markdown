@@ -163,7 +163,7 @@ How much did it help? Let's look at Lucene's nightly benchmarks over the period 
 
 Here's what happened that is related to vectorization:
  - Annotation `IN` is where Lucene introduced the above algorithm for conjunctive query evaluation.
- - Annotation `IS is a hardware upgrade, no meaningful code changes.
+ - Annotation `IS` is a hardware upgrade, no meaningful code changes.
  - Annotation `IY` made `filterByScore` branchless.
  - Annotation `IZ` optimized `nextDocsAndScores` in the case when Lucene encodes blocks of postings as bit sets.
  - Annotation `JA` is where `filterByScore` started using SIMD instructions.
