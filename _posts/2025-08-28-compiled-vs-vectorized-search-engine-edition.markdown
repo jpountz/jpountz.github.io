@@ -177,3 +177,5 @@ Despite their more branchy nature, search engines can also take advantage of vec
 If someone ever finds the time, it would be interesting to implement retrieval using compilation and compare performance with vectorization. Something else that I wanted to evaluate but haven't found the time yet is increasing the block size from 128 to 256. In theory, this should help take further advantage of vectorization at the expense of decoding a bit more data.
 
 I would like to thank Lucene committers Guo Feng and Ge Song who helped me work on this, as well as Mike McCandless for maintaining Lucene's nightly benchmarks for so many years.
+
+This work will be released in Lucene 10.3.
