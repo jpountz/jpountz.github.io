@@ -64,8 +64,8 @@ interface Scorer {
   int advanceShallow(int target);
 
   /**
-   * Compute the maximum possible score for doc IDs between the current doc ID
-   * and the given doc ID (inclusive).
+   * Compute the maximum possible score for doc IDs between the last target
+   * passed to advanceShallow and the given doc ID (inclusive).
    */
   float getMaxScore(int docIdUpTo);
 
