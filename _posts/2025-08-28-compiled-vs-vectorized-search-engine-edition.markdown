@@ -8,7 +8,7 @@ Virtual function calls are quite expensive, which is why database systems have b
 
 This topic has been less studied in Information Retrieval. Mostly because it's not a problem in what is considered the standard case. The Information Retrieval literature focuses on evaluating disjunctive and conjunctive queries where all clauses are term queries. You don't need virtual function calls to solve this problem since the only kind of iterators that you need to deal with are iterators over postings lists. This is one reason why [PISA](https://github.com/pisa-engine/pisa) is fast (the other main reason being recursive graph bisection): it doesn't need to deal with the overhead of virtual function calls and the compiler can aggressively inline performance-sensitive code, in-turn enabling other optimizations ("inlining is the mother of all other optiumizations").
 
-However, you can build more interesting search engines if you allow your disjunctive/conjunctive clauses to be anything: term queries, range queries, or even other disjunctive/conjunctive queries. This is what Lucene does, but also Tantivy or Vespa, so this isn't anecdotal. These engines implement document-at-a-time retrieval on top of an iterator abstraction that looks like this:
+However, you can build more interesting search engines if you allow your disjunctive/conjunctive clauses to be anything: term queries, range queries, or even other disjunctive/conjunctive queries. This is what Lucene does, but also Tantivy or Vespa, so this isn't anecdotal. These engines implement document-at-a-time (DAAT) retrieval on top of an iterator abstraction that looks like this:
 
 ```java
 /**
