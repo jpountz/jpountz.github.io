@@ -41,7 +41,7 @@ But Lucene has also recently been exploring vectorizing query evaluation with so
 
 ## Vectorizing conjunctive query evaluation
 
-I chose to focus on conjunctive queries, because conjunctive query evaluation tends to be a bit simpler, and also because they are more interesing with regards to vectorization, since the key aspect of conjunctive query evaluation is to cancel evaluating a document as soon as we find one clause that doesn't match this document. Intuitively, this requires lots of branching, which doesn't play well with vectorization.
+I chose to focus on conjunctive queries, because conjunctive query evaluation tends to be a bit simpler, and also because they are more interesting with regards to vectorization, since the key aspect of conjunctive query evaluation is to cancel evaluating a document as soon as we find one clause that doesn't match this document. Intuitively, this requires lots of branching, which doesn't play well with vectorization.
 
 Before reading further, I would recommend getting familiar with [Ding and Suel's paper on block-max indexes](https://web.archive.org/web/20120714024735id_/http://cis.poly.edu/suel/papers/bmw.pdf) and the block-max AND algorithm in particular (section 7.3 in the paper). One thing worth noting about Lucene's index format at this point is that postings lists are organized into blocks of 128 doc IDs and term frequencies. Doc IDs are encoded either with FOR-delta (which means that deltas between consecutive doc IDs are packed into as few bits as required) if they are sparse, or as bit sets if they are dense (akin to roaring bitmaps). Score impacts are aligned with postings blocks, so Lucene can tell what the maximum score that a doc ID in a block may produce before decoding this block.
 
