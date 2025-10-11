@@ -286,4 +286,4 @@ an entire prompt) or only high-frequency terms (e.g. stop words). For instance,
 see these two disjunctive queries, which are two of the hardest queries from
 the benchmark:
 
-![Hard queries](/images/tantivy_bench_hard_queries.png)
+![Hard queries](/images/tantivy_bench_hard_queries.jpeg)
