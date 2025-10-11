@@ -22,11 +22,11 @@ score that is greater than the current top-k-th score, needs to be
 re-evaluated.
 
 In fact, after implementing block-max WAND, the Lucene project got several
-reports of queries that had gone slower. Some of them were due to some cases
+reports of queries that had become sloweuur. Some of them were due to some cases
 not being properly optimized, e.g. filtered disjunctive queries, but there were
 also some cases where the slowdown could be 100% attributed to block-max WAND
 with no obvious fix. It was easy to check: switching to exhaustive evaluation
-made the query faster. But hard to fix.
+made the query faster.
 
 This is what drove interest in experimenting with the (block-max)
 [MAXSCORE](https://www.sciencedirect.com/science/article/abs/pii/030645739500020H)
@@ -40,13 +40,13 @@ match any essential clause.
 
 A key property of MAXSCORE that we liked is that the partitioning into
 essential and non-essential clauses doesn't need to be performed again on every
-document, only when the top-k-th score increases. And you don't actually need
-to do the partitioning again when the top-k-th score increases, worst-case
+document, only when the top-k-th score increases. Actually it's not required to
+do the partitioning again when the top-k-th score increases, worst-case
 scenario you'll just evaluate more documents. It makes it very easy to amortize
 the overhead of MAXSCORE across many doc IDs, to the point that the overhead of
 MAXSCORE should be negligible. Said otherwise, you can implement MAXSCORE in a
 way that it never gets much slower than exhaustive evaluation, something that
-cannot be guaranteed with WAND.
+is impossible with WAND.
 
 A second interesting property of MAXSCORE that we liked is that we could reuse
 an optimization that had been developed for exhaustive evaluation that Lucene
@@ -55,12 +55,12 @@ merging multiple iterators into a single iterator that matches the union of the
 doc IDs of the underlying iterators. The textbook approach for solving this
 problem consists of using a
 [heap](https://en.wikipedia.org/wiki/Heap_(data_structure)). But if your doc
-IDs are densely allocated, you can often do faster by accumulating matches for
-each clause into a bit set, and then replay this bit set. This helps save the
-overhead of re-ordering the heap on every doc ID of every underlying iterator.
+IDs are densely allocated, you can often do better by accumulating matches into
+a bit set, and then replay this bit set. This helps save the overhead of
+re-ordering the heap on every doc ID of every underlying iterator.
 
-With all that said, let's look at some pseudo-code that describes how Lucene
-evaluates disjunctive queries. First you need iterators of doc IDs:
+With all that said, let's look at some Java-like pseudo-code that describes how
+Lucene evaluates disjunctive queries. First you need iterators of doc IDs:
 
 ```java
 /**
@@ -82,8 +82,8 @@ interface DocIdSetIterator {
 }
 ```
 
-Lucene has a `Scorer` abstraction that enrichs a `DocIdSetIterator` with more
-capabilities related to scoring:
+Then Lucene has a `Scorer` abstraction that enrichs a `DocIdSetIterator` with
+more capabilities related to scoring:
 
 
 ```java
@@ -121,7 +121,7 @@ interface Scorer {
 And now, here's Lucene optimized block-max MAXSCORE algorithm. It has two
 levels of windows: outer windows, which are computed based on the block-max
 indexes of the underlying clauses, and inner clauses, which are used to
-implement the BS1 optimization with a bounded amount of allocated memory.
+implement the BS1 optimization with a bounded amount of memory.
 
 ```java
 int INNER_WINDOW_SIZE = 4_096;
@@ -162,9 +162,11 @@ void evaluateDisjunctiveQuery(Scorer[] scorers, Heap topkHeap) {
       // equal to the top-k-th min score. No competitive hits in this outer
       // window, it can be skipped.
     } else if (essentialScorers.length == 1) {
-      evaluateWindowSingleEssentialClause(outerWindowMax, essentialScorers[0], nonEssentialScorers, cumulativeMaxScores, topkHeap);
+      evaluateWindowSingleEssentialClause(
+          outerWindowMax, essentialScorers[0], nonEssentialScorers, cumulativeMaxScores, topkHeap);
     } else {
-      evaluateWindowMultipleEssentialClauses(outerWindowMax, essentialScorers, nonEssentialScorers, cumulativeMaxScores, topkHeap);
+      evaluateWindowMultipleEssentialClauses(
+          outerWindowMax, essentialScorers, nonEssentialScorers, cumulativeMaxScores, topkHeap);
     }
 
     outerWindowMin = outerWindowMax;
@@ -191,7 +193,8 @@ void evaluateWindowSingleEssentialClause(
     // The computation of BM25 scores uses SIMD instructions.
     (int[] docs, float[] scores) = lead.nextDocsAndScores(windowMax);
 
-    applyNonEssentialScorersAndCollect(docs, scores, nonEssentialScarers, cumulativeMaxScores, topkHeap);
+    applyNonEssentialScorersAndCollect(
+        docs, scores, nonEssentialScorers, cumulativeMaxScores, topkHeap);
   }
 }
 
@@ -203,8 +206,11 @@ void evaluateWindowMultipleEssentialClauses(
     float[] cumulativeMaxScores,
     Heap topkHeap) {
 
-  // Split the outer window into one or more inner windows whose doc ID range doesn't exceed 4,096
-  for (int innerWindowMin = outerWindowMin; innerWindowMin < outerWindowMax; innerWindowMin += INNER_WINDOW_SIZE) {
+  // Split the outer window into one or more inner windows whose doc ID range
+  // doesn't exceed 4,096
+  for (int innerWindowMin = outerWindowMin;
+      innerWindowMin < outerWindowMax;
+      innerWindowMin += INNER_WINDOW_SIZE) {
     int innerWindowMax = min(innerWindowMin + INNER_WINDOW_SIZE, outerWindowMax);
 
     Accumulator accumulator = new Accumulator();
@@ -227,7 +233,8 @@ void evaluateWindowMultipleEssentialClauses(
     // scores by iterating set bits of the `matches` bit set
     (int[] docs, float[] scores) = accumulator.matchesAndScores();
 
-    applyNonEssentialScorersAndCollect(docs, scores, nonEssentialScarers, cumulativeMaxScores, topkHeap);
+    applyNonEssentialScorersAndCollect(
+        docs, scores, nonEssentialScorers, cumulativeMaxScores, topkHeap);
   }
 }
 
