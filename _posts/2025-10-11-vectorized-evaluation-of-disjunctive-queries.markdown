@@ -123,7 +123,7 @@ levels of windows: outer windows, which are computed based on the block-max
 indexes of the underlying clauses, and inner clauses, which are used to
 implement the BS1 optimization with a bounded amount of allocated memory.
 
-```
+```java
 int INNER_WINDOW_SIZE = 4_096;
 
 class Accumulator {
