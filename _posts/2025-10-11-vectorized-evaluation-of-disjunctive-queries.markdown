@@ -122,7 +122,7 @@ interface Scorer {
 
 And now, here's Lucene optimized block-max MAXSCORE algorithm. It has two
 levels of windows: outer windows, which are computed based on the block-max
-indexes of the underlying clauses, and inner clauses, which are used to
+indexes of the underlying clauses, and inner windows, which are used to
 implement the BS1 optimization with a bounded amount of memory.
 
 ```java
