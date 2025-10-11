@@ -58,7 +58,7 @@ doc IDs of the underlying iterators. The textbook approach for solving this
 problem consists of using a
 [heap](https://en.wikipedia.org/wiki/Heap_(data_structure)). But if your doc
 IDs are densely allocated, you can often do better by accumulating matches into
-a bit set, and then replay this bit set. This helps save the overhead of
+a bit set, and then replaying this bit set. This helps save the overhead of
 re-ordering the heap on every doc ID of every underlying iterator.
 
 With all that said, let's look at some Java-like pseudo-code that describes how
