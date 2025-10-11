@@ -138,7 +138,7 @@ class Accumulator {
  */
 void evaluateDisjunctiveQuery(Scorer[] scorers, Heap topkHeap) {
 
-  for (int outerWindowMin = 0; ; ) {
+  for (int outerWindowMin = 0; outerWindowMin != Integer.MAX_VALUE; ) {
     // Partition scorers into essential and non-essential scorers based on the
     // score upperbounds reported by Scorer#getMaxScore. There is an
     // inter-dependency between outer windows and partitions since outer windows
