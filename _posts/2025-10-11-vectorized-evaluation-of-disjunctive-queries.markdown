@@ -22,7 +22,7 @@ score that is greater than the current top-k-th score, needs to be
 re-evaluated.
 
 In fact, after implementing block-max WAND, the Lucene project got several
-reports of queries that had become sloweuur. Some of them were due to some cases
+reports of queries that had become slower. Some of them were due to some cases
 not being properly optimized, e.g. filtered disjunctive queries, but there were
 also some cases where the slowdown could be 100% attributed to block-max WAND
 with no obvious fix. It was easy to check: switching to exhaustive evaluation
@@ -36,7 +36,9 @@ least max scores whose sum of max scores is still less than or equal to the
 top-k-th score. Essential clauses are all other clauses. Said otherwise, even
 if all non-essential clauses matched, it would still not be enough for the hit
 to enter the top-k hit. A document may not enter the top-k heap if it doesn't
-match any essential clause.
+match any essential clause. As the query starts processing, all clauses are
+essential, and as progress is made, more and more clauses migrate to the set of
+non-essential clauses.
 
 A key property of MAXSCORE that we liked is that the partitioning into
 essential and non-essential clauses doesn't need to be performed again on every
@@ -158,9 +160,9 @@ void evaluateDisjunctiveQuery(Scorer[] scorers, Heap topkHeap) {
     }
 
     if (essentialScorers.length == 0) {
-      // This may happen if the sum of all max scores is still less than or
-      // equal to the top-k-th min score. No competitive hits in this outer
-      // window, it can be skipped.
+      // This happens if the sum of all max scores is still less than or equal
+      // to the top-k-th min score. No competitive hits in this outer window,
+      // it can be skipped.
     } else if (essentialScorers.length == 1) {
       evaluateWindowSingleEssentialClause(
           outerWindowMax, essentialScorers[0], nonEssentialScorers, cumulativeMaxScores, topkHeap);
