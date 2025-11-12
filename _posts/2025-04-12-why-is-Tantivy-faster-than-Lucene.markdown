@@ -4,6 +4,8 @@ title:  "Why is Tantivy faster than Lucene?"
 date:   2025-04-12
 ---
 
+EDIT (2025-11-12): Thanks to learnings from the Tantivy project, [as of version 10.3, Apache Lucene is now on par with Tantivy on most queries and even faster on some queries](https://tantivy-search.github.io/bench/). This is likely a temporary win though, until the Tantivy project [replicates performance improvements from the Lucene project](https://github.com/quickwit-oss/tantivy/issues?q=is%3Aissue%20state%3Aopen%20author%3Ajpountz), or even finds new opportunities for optimizations!
+
 In 2023, the [Tantivy](https://github.com/quickwit-oss/tantivy) folks started publishing [comparative benchmarks](https://tantivy-search.github.io/bench/) between Apache Lucene, Tantivy and [PISA](https://github.com/pisa-engine/pisa). As Lucene enjoys a good reputation as a search library, many folks published benchmarks claiming that their software was faster than Lucene over the years, often using disputable methodology. But this one was interesting for the Lucene community for a few reasons:
  - You could sense an effort for fairness rather than tuning the methodology to be able to make the boldest possible claims, something that they [called out](https://github.com/quickwit-oss/search-benchmark-game/blob/3c124e2823e27e2c425769ffac24c71085065502/README.md?plain=1#L19-L21).
  - The setup of the benchmark is very similar to [Lucene's own nightly benchmarks](https://benchmarks.mikemccandless.com/): it uses the Wikipedia dataset and runs various queries against the content of Wikipedia articles.
