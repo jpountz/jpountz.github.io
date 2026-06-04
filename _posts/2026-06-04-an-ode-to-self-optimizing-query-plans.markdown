@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "An ode to self-optimizing query plans"
-date:   2026-06-06
+date:   2026-06-04
 ---
 
 Common wisdom is that databases should make decisions at the query planning stage and then hand over the plan to a dumb executor. This has several nice properties. Separation of concerns helps each tool focus on one thing and do it right: computing the cheapest possible plan in the planner, and squeezing the best efficiency out of the hardware in the executor. It's easy to introspect how the database evaluates a query by simply looking at the produced plan. It's easier to decompose complex queries into reusable building blocks. And more.
