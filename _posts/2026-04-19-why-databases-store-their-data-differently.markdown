@@ -84,10 +84,9 @@ their total number at bay.
 ### B2: Sorted arrays, partitioned
 
 Another approach is to ensure that each array stores a disjoint subset of the
-data, so no precedence rules are needed. To do this,
-updates and deletes attach a deletion marker to the array where the entry was
-previously stored so that each entry is only active in a single array at a
-time.
+data, so no precedence rules are needed. To do this, updates and deletes attach
+a deletion marker to the array where the entry was previously stored so that
+each entry is only active in a single array at a time.
 
 ```
 Data:    [1 (1), 3 (1), 4 (0), 5 (1), 7 (1), 9 (1)] 
@@ -97,7 +96,7 @@ Data:    [0 (0), 3 (3)]
 Deletes: [            ]
 ```
 
-## Analysis
+## Who uses what
 
 There are major databases in each category, for instance MySQL (InnoDB) stores
 its data in a B-tree, so it's part of the A category. B1 is essentially the
@@ -105,29 +104,35 @@ description of a [log-structured
 merge-tree](https://en.wikipedia.org/wiki/Log-structured_merge-tree), which is
 the foundation of wide-column stores like Cassandra and ScyllaDB, or key-value
 stores like RocksDB. Key-value stores can in turn serve as the storage layer of
-OLTP databases like MyRocks or CockroachDB. Finally, Lucene is B2 and calls
-these immutable arrays "segments".
+OLTP databases like MyRocks. Finally, Lucene is B2 and calls these immutable
+arrays "segments".
 
-OLAP databases like to think of their data as append-only, which is convenient
-since B1 and B2 are effectively the same in this case, and you get the benefits
-of both at the same time (discussed further below). That said, some OLAP
-databases have added support for updates/deletes to support a broader range of
-use cases. For instance, ClickHouse is in the B category, and can be seen as B1
-when you query it with the [`FINAL`
+OLAP databases like to think of their data as append-only. If your database
+doesn't support updates, B1 and B2 degenerate to plain sorted arrays, and you
+get the benefits of both at the same time (discussed in the next section). That
+said, some OLAP databases have added support for updates/deletes to support a
+broader range of use cases. For instance, ClickHouse is in the B category, and
+can be seen as B1 when you query it with the [`FINAL`
 keyword](https://clickhouse.com/docs/sql-reference/statements/select/from#final-modifier)
 to force it to deduplicate entries by primary key, or as B2 if you delete data
 using [lightweight
 deletes](https://clickhouse.com/docs/guides/developer/lightweight-delete#how-lightweight-deletes-work-internally-in-clickhouse)
 - which is then very similar to Lucene.
 
+Not all databases cleanly fit in one of these categories. For instance,
+PostgreSQL stores its rows in an unordered append-only log that it calls the
+heap. It then organizes this data with trees that maintain pointers to this
+heap, but the primary data structure is still this append-only log.
+
+## Why the choice matters
+
 Trees are simple conceptually, but a bit difficult to store on disk.
 Traditional filesystems don't support inserting data in the middle of a file
 efficiently, which makes updating these trees challenging. This has led to the
 development of [B-trees](https://en.wikipedia.org/wiki/B-tree) and their many
-variants. A benefit of trees is that their updates are localized to specific
-nodes, which makes it easier to support transactions by locking the regions of
-the tree that need updating. This explains why trees are still popular for OLTP
-databases.
+variants. B-trees are very well understood, have stable performance
+characteristics (not subject to compaction like category B), and remain a
+popular option for OLTP databases.
 
 Category B avoids the problem of inserting data in the middle of a file by
 writing files once and never modifying them until they become unused
@@ -137,11 +142,12 @@ makes it possible to store data in object stores.
 
 B1 is the only approach that can publish updates without having to read
 existing data first. A (trees) must find the node to update, and B2 must locate
-which array contains the key to attach a deletion marker to. This makes B1
-great at write throughput.
+which array contains the key to attach a deletion marker to. Combined with the
+fact that B1 only needs to perform sequential writes (as opposed to random),
+this makes B1 great at write throughput.
 
 With B2, each array stores a disjoint subset of the data with no precedence
-rules, which makes it convenient for read workloads.
+rules, which makes it convenient for read workloads compared with B1.
 For instance, imagine that you want to count the number of entries in a range.
 You can count the number of non-deleted entries in each array independently
 and then sum up the per-array counts. This is why B2 makes sense for OLAP
@@ -149,10 +155,8 @@ databases or search engines, which optimize for read efficiency.
 
 However, one read workload in particular performs equally well with B1 and B2:
 simple key-value lookups. In both cases, you need to iterate over arrays until
-you find the one that has the key of interest. The only benefit of B2 over B1
-is that you can loop in arbitrary order rather than precedence order, but this
-doesn't make a meaningful difference. This is why B1 is such a sweet spot for
-key-value stores: great write efficiency and read efficiency combined.
+you find the one that has the key of interest. This is why none of the
+key-value stores use B2 and prefer B1.
 
 ## Conclusion
 
@@ -162,5 +166,5 @@ the keys and values in these index structures represent, row-oriented vs.
 column-oriented storage, how secondary indexing is performed, ...
 
 Still, I've found this useful as a mental model for connecting how a database
-stores its data to its high-level category (OLTP vs. OLAP vs.  key-value store
+stores its data to its high-level category (OLTP vs. OLAP vs. wide-column store
 vs. search engine). I hope it'll be useful for you too.
