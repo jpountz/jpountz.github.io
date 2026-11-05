@@ -116,8 +116,8 @@ can be seen as B1 when you query it with the [`FINAL`
 keyword](https://clickhouse.com/docs/sql-reference/statements/select/from#final-modifier)
 to force it to deduplicate entries by primary key, or as B2 if you delete data
 using [lightweight
-deletes](https://clickhouse.com/docs/guides/developer/lightweight-delete#how-lightweight-deletes-work-internally-in-clickhouse)
-- which is then very similar to Lucene.
+deletes](https://clickhouse.com/docs/guides/developer/lightweight-delete#how-lightweight-deletes-work-internally-in-clickhouse),
+which is then very similar to Lucene.
 
 Not all databases cleanly fit in one of these categories. For instance,
 PostgreSQL stores its rows in an unordered append-only log that it calls the
@@ -138,7 +138,7 @@ Category B avoids the problem of inserting data in the middle of a file by
 writing files once and never modifying them until they become unused
 (e.g. after compaction): each array is stored in its own immutable file. One
 interesting side-effect of treating files as immutable once written is that it
-makes it possible to store data in object stores.
+makes it quite natural to store data in object stores.
 
 B1 is the only approach that can publish updates without having to read
 existing data first. A (trees) must find the node to update, and B2 must locate
