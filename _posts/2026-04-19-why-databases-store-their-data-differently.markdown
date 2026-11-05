@@ -121,7 +121,7 @@ which is then very similar to Lucene.
 Not all databases cleanly fit in one of these categories. For instance,
 PostgreSQL stores its rows in an unordered log that it calls the heap. It then
 organizes this data with trees that maintain pointers to this heap, but the
-primary data structure is still this append-only log.
+primary data structure is still this unordered log.
 
 ## Why the choice matters
 
