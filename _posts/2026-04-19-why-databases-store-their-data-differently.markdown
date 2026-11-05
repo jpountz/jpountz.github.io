@@ -7,7 +7,7 @@ date:   2026-04-19
 I was recently chatting with a friend about database architecture, and why, for
 instance, OLTP databases and search engines are implemented very differently.
 This friend is familiar with computer science concepts, but not with database
-internals, so I tried to make the explanation as simple as I could. This blog
+internals, so I tried to make the explanation as simple as I could. This post
 is an expanded version of the discussion we had.
 
 I focused on the storage layer, which is arguably the most distinctive
@@ -66,8 +66,7 @@ Now, how do we handle updates or deletions? There are two approaches:
 One approach is to stack arrays on top of each other: newer layers shadow older
 ones. To support deletions, we introduce the ability to map keys to a
 tombstone. Starting from our original array, we insert an entry for 0, remove
-the entry for 7 and decide to map numbers to the remainder of their division by
-4 rather than 2, so 3 now needs to map to 3 rather than 1:
+the entry for 7 and map 3 to 3 instead of 1:
 
 ```
 [1 (1), 3 (1), 4 (0), 5 (1), 7 (1), 9 (1)]
@@ -120,19 +119,20 @@ deletes](https://clickhouse.com/docs/guides/developer/lightweight-delete#how-lig
 which is then very similar to Lucene.
 
 Not all databases cleanly fit in one of these categories. For instance,
-PostgreSQL stores its rows in an unordered append-only log that it calls the
-heap. It then organizes this data with trees that maintain pointers to this
-heap, but the primary data structure is still this append-only log.
+PostgreSQL stores its rows in an unordered log that it calls the heap. It then
+organizes this data with trees that maintain pointers to this heap, but the
+primary data structure is still this append-only log.
 
 ## Why the choice matters
 
 Trees are simple conceptually, but a bit difficult to store on disk.
 Traditional filesystems don't support inserting data in the middle of a file
-efficiently, which makes updating these trees challenging. This has led to the
-development of [B-trees](https://en.wikipedia.org/wiki/B-tree) and their many
-variants. B-trees are very well understood, have stable performance
-characteristics (not subject to compaction like category B), and remain a
-popular option for OLTP databases.
+efficiently, which makes updating these trees challenging. Furthermore, seeks
+can be expensive. This has led to the development of
+[B-trees](https://en.wikipedia.org/wiki/B-tree) and their many variants.
+B-trees are very well understood, have stable performance characteristics (not
+subject to compaction like category B), and remain a popular option for OLTP
+databases.
 
 Category B avoids the problem of inserting data in the middle of a file by
 writing files once and never modifying them until they become unused
@@ -140,11 +140,11 @@ writing files once and never modifying them until they become unused
 interesting side-effect of treating files as immutable once written is that it
 makes it quite natural to store data in object stores.
 
-B1 is the only approach that can publish updates without having to read
-existing data first. A (trees) must find the node to update, and B2 must locate
-which array contains the key to attach a deletion marker to. Combined with the
-fact that B1 only needs to perform sequential writes (as opposed to random),
-this makes B1 great at write throughput.
+B1 allows publishing updates without having to read existing data first. A
+(trees) must find the node to update, and B2 must locate which array contains
+the key to attach a deletion marker to. Combined with the fact that B1 only
+needs to perform sequential writes (as opposed to random), this makes B1 great
+at write throughput.
 
 With B2, each array stores a disjoint subset of the data with no precedence
 rules, which makes it convenient for read workloads compared with B1.
@@ -155,8 +155,8 @@ databases or search engines, which optimize for read efficiency.
 
 However, one read workload in particular performs equally well with B1 and B2:
 simple key-value lookups. In both cases, you need to iterate over arrays until
-you find the one that has the key of interest. This is why none of the
-key-value stores use B2 and prefer B1.
+you find the one that has the key of interest. This is why key-value stores
+prefer B1 over B2.
 
 ## Conclusion
 
